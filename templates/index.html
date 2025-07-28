@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon Asset Downloader</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gm-blue: #00479d; --gm-red: #da291c; --light-blue: #eef5ff; --border-color: #dee2e6;
+            --text-dark: #212529; --text-light: #495057; --success-green: #198754; --warning-yellow: #ffc107;
+            --danger-red: #dc3545; --gray-bg: #f8f9fa;
+        }
+        .indian-flag { display: inline-block; width: 20px; height: 14px; background: linear-gradient(to bottom, #ff9933 33.33%, white 33.33%, white 66.66%, #138808 66.66%); border-radius: 2px; position: relative; border: 1px solid rgba(0, 0, 0, 0.1); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--gray-bg); color: var(--text-dark); min-height: 100vh; }
+        .container { max-width: 1200px; margin: 20px auto; padding: 0; }
+        .header { background-color: var(--gm-blue); color: white; padding: 30px 40px; text-align: center; position: relative; border-bottom: 5px solid var(--gm-red); display: flex; align-items: center; justify-content: center; gap: 25px; }
+        .gm-logo { width: 70px; height: 90px; flex-shrink: 0; }
+        .header-content { text-align: left; }
+        .header-content h1 { font-size: 2.5rem; margin-bottom: 4px; font-weight: 700; letter-spacing: -0.5px; }
+        .header-content .tagline { font-size: 1.1rem; opacity: 0.9; font-weight: 400; }
+        .location-badge { position: absolute; top: 15px; right: 20px; display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.1); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+        .main-container { background: #ffffff; padding: 30px; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; border: 1px solid var(--border-color); border-top: none; }
+        .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .content-card { background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid var(--border-color); }
+        .card-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); }
+        .card-icon { width: 45px; height: 45px; background: var(--light-blue); color: var(--gm-blue); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+        .card-title { font-size: 1.4rem; font-weight: 600; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 1rem; }
+        .form-control { width: 100%; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; font-family: 'Inter', sans-serif; transition: all 0.2s ease; }
+        .form-control:focus { outline: none; border-color: var(--gm-blue); box-shadow: 0 0 0 3px rgba(0, 71, 157, 0.2); }
+        .file-upload-area { border: 2px dashed var(--border-color); border-radius: 12px; padding: 25px; text-align: center; transition: all 0.2s ease; cursor: pointer; }
+        .file-upload-area:hover, .file-upload-area.drag-over { border-color: var(--gm-blue); background: var(--light-blue); }
+        .file-upload-area i { font-size: 2.5rem; color: var(--gm-blue); margin-bottom: 10px; }
+        .file-upload-area p { margin: 0; color: var(--text-light); }
+        .file-upload-area input[type="file"] { display: none; }
+        .uploaded-file { background: var(--light-blue); border: 1px solid var(--gm-blue); border-radius: 8px; padding: 12px 15px; margin-top: 15px; display: none; align-items: center; }
+        .uploaded-file.show { display: flex; }
+        .uploaded-file i { color: var(--gm-blue); margin-right: 10px; }
+        #removeFile { margin-left: auto; background: none; border: none; color: var(--danger-red); cursor: pointer; font-size: 1.2rem; }
+        .btn-group { display: flex; gap: 15px; margin-top: 20px; }
+        .btn { flex-grow: 1; padding: 14px 20px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-primary { background: var(--gm-blue); color: white; }
+        .btn-primary:hover:not(:disabled) { background: #003a7a; }
+        .btn-danger { background: var(--danger-red); color: white; }
+        .btn-danger:hover:not(:disabled) { background: #b02118; }
+        .btn:disabled { background-color: #6c757d; cursor: not-allowed; opacity: 0.7; }
+        .feature-list { list-style: none; padding: 0; }
+        .feature-list li { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; color: var(--text-light); }
+        .feature-list li i { color: var(--success-green); width: 20px; }
+        .status-box { display: flex; align-items: center; gap: 15px; }
+        .status-indicator { padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
+        .status-idle { background-color: #6c757d; color: white; }
+        .status-running { background-color: var(--success-green); color: white; animation: pulse 1.5s infinite; }
+        .status-error { background-color: var(--danger-red); color: white; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); } 100% { box-shadow: 0 0 0 10px rgba(25, 135, 84, 0); } }
+        .progress-and-logs-card, .summary-card { margin-top: 30px; display: none; background-color: #2a2d32; border-radius: 12px; overflow: hidden; }
+        .progress-and-logs-card.show, .summary-card.show { display: block; }
+        .card-bar-header { padding: 15px 25px; background-color: #343a40; display: flex; justify-content: space-between; align-items: center; color: white; }
+        .card-bar-title { font-weight: 600; font-size: 1.1rem; }
+        .progress-section { padding: 25px; }
+        .progress-header { display: flex; justify-content: space-between; align-items: center; color: #f8f9fa; margin-bottom: 15px; }
+        #progressPercent { font-size: 1.5rem; font-weight: 700; }
+        .progress-bar-container { background: rgba(0, 0, 0, 0.2); border-radius: 25px; height: 10px; overflow: hidden; }
+        .progress-bar { background: var(--success-green); height: 100%; border-radius: 25px; transition: width 0.3s ease; width: 0%; }
+        .progress-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; }
+        .stat-item { background: #343a40; padding: 15px; border-radius: 8px; text-align: center; }
+        .stat-number { font-size: 1.6rem; font-weight: 700; color: white; }
+        .stat-label { font-size: 0.8rem; color: #adb5bd; margin-top: 5px; text-transform: uppercase; }
+        #logsContainer, #failedItemsList { padding: 10px 25px 25px 25px; max-height: 400px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; font-size: 0.9rem; }
+        .log-entry { padding: 6px 0; border-bottom: 1px solid #495057; display: flex; }
+        .log-entry:last-child { border-bottom: none; }
+        .log-timestamp { color: #8d96a0; margin-right: 15px; }
+        .log-message.info { color: #8ab4f8; }
+        .log-message.warning { color: var(--warning-yellow); }
+        .log-message.error { color: var(--danger-red); }
+        .log-message.default { color: #ced4da; }
+        .footer { text-align: center; padding: 25px; color: var(--text-light); font-size: 0.9rem; }
+        #failedItemsList { list-style-type: none; color: #ced4da; }
+        #failedItemsList li { padding: 8px 0; border-bottom: 1px solid #495057; }
+        @media (max-width: 992px) { .main-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { body { padding: 0; } .container { margin: 0; border-radius: 0; } .header { border-radius: 0; flex-direction: column; text-align: center; gap: 10px; padding: 20px; } .location-badge { position: static; margin-top: 10px; } .main-container { padding: 20px; border-radius: 0; } .btn-group { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <img src="{{ url_for('static', filename='img/gm_logo.png') }}" alt="General Mills Logo" class="gm-logo">
+            <div class="header-content">
+                <h1>Amazon Asset Downloader</h1>
+                <p class="tagline">Carousel, Mobile Hero & Nutrition Image Fetcher</p>
+            </div>
+            <div class="location-badge">
+                <span class="indian-flag"></span> Mumbai, India
+            </div>
+        </header>
+
+        <main class="main-container">
+            <div class="main-grid">
+                <!-- Left Column: Configuration -->
+                <div class="left-column">
+                    <div class="content-card">
+                        <div class="card-header">
+                            <div class="card-icon"><i class="fas fa-cog"></i></div>
+                            <h2 class="card-title">Configuration</h2>
+                        </div>
+                        <form id="downloadForm">
+                            <!-- Single Entry Fields -->
+                            <div id="single-entry-group">
+                                <label>Single Item Entry</label>
+                                <div class="form-group">
+                                    <input type="text" id="gtinInput" name="gtin" class="form-control" placeholder="Enter GTIN">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Or Upload File (Batch)</label>
+                                <div class="file-upload-area" id="fileUploadArea">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <p><strong>Click or drag & drop file</strong></p>
+                                    <p>Supports .csv, .xlsx, .xls</p>
+                                    <input type="file" id="fileInput" name="file" accept=".csv,.xlsx,.xls">
+                                </div>
+                                <div class="uploaded-file" id="uploadedFile">
+                                    <i class="fas fa-file-alt"></i>
+                                    <span id="fileName"></span>
+                                    <button type="button" id="removeFile"><i class="fas fa-times-circle"></i></button>
+                                </div>
+                            </div>
+                            
+                            <div class="btn-group">
+                                <button type="submit" class="btn btn-primary" id="startBtn"><i class="fas fa-play"></i> Start Download</button>
+                                <button type="button" class="btn btn-danger" id="stopBtn" disabled><i class="fas fa-stop"></i> Stop</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Right Column: Status & Features -->
+                <div class="right-column">
+                    <div class="content-card">
+                        <div class="card-header">
+                            <div class="card-icon"><i class="fas fa-tachometer-alt"></i></div>
+                            <h2 class="card-title">System Status</h2>
+                        </div>
+                        <div class="status-box">
+                            <div class="status-indicator status-idle" id="statusIndicator">Idle</div>
+                            <strong id="statusText">System is ready.</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="content-card" style="margin-top: 30px;">
+                        <div class="card-header">
+                            <div class="card-icon"><i class="fas fa-star"></i></div>
+                            <h2 class="card-title">Features</h2>
+                        </div>
+                        <ul class="feature-list">
+                            <li><i class="fas fa-check-circle"></i> Downloads Carousel, Mobile Hero & Nutrition images.</li>
+                            <li><i class="fas fa-check-circle"></i> Single item or batch file upload.</li>
+                            <li><i class="fas fa-check-circle"></i> Real-time progress and logging.</li>
+                            <li><i class="fas fa-check-circle"></i> Start and stop functionality.</li>
+                            <li><i class="fas fa-check-circle"></i> Clean, responsive interface.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress and Logs Card -->
+            <div class="progress-and-logs-card" id="progressCard">
+                <div class="card-bar-header">
+                    <span class="card-bar-title"><i class="fas fa-terminal"></i> Execution Log</span>
+                </div>
+                <div class="progress-section">
+                    <div class="progress-header">
+                        <span id="currentTask">Waiting...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+                    <div class="progress-stats">
+                        <div class="stat-item"><div class="stat-number" id="totalItems">0</div><div class="stat-label">Total Items</div></div>
+                        <div class="stat-item"><div class="stat-number" id="completedItems">0</div><div class="stat-label">Completed</div></div>
+                        <div class="stat-item"><div class="stat-number" id="remainingItems">0</div><div class="stat-label">Remaining</div></div>
+                        <div class="stat-item"><div class="stat-number" id="currentItemId">-</div><div class="stat-label">Current ID</div></div>
+                    </div>
+                </div>
+                <div id="logsContainer"></div>
+            </div>
+
+            <!-- Failed Items Summary Card -->
+            <div class="summary-card" id="summaryCard">
+                 <div class="card-bar-header">
+                    <span class="card-bar-title"><i class="fas fa-exclamation-circle"></i> Items with No Assets Found</span>
+                </div>
+                <ul id="failedItemsList"><li>No failed items to display.</li></ul>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>© 2024 General Mills | Digital Innovation & Technology</p>
+        </footer>
+    </div>
+
+    <script>
+        const socket = io();
+        
+        // DOM Elements
+        const form = document.getElementById('downloadForm');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadedFileDiv = document.getElementById('uploadedFile');
+        const fileNameSpan = document.getElementById('fileName');
+        const removeFileBtn = document.getElementById('removeFile');
+        const gtinInput = document.getElementById('gtinInput'); // Keep GTIN input
+        
+        // UI State Elements
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const progressCard = document.getElementById('progressCard');
+        const summaryCard = document.getElementById('summaryCard');
+        const logsContainer = document.getElementById('logsContainer');
+        
+        // Progress Elements
+        const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        const currentTask = document.getElementById('currentTask');
+        const totalItemsEl = document.getElementById('totalItems');
+        const completedItemsEl = document.getElementById('completedItems');
+        const remainingItemsEl = document.getElementById('remainingItems');
+        const currentItemIdEl = document.getElementById('currentItemId');
+        const failedItemsList = document.getElementById('failedItemsList');
+
+        // Event Listeners
+        fileUploadArea.addEventListener('click', () => fileInput.click());
+        fileUploadArea.addEventListener('dragover', (e) => { e.preventDefault(); fileUploadArea.classList.add('drag-over'); });
+        fileUploadArea.addEventListener('dragleave', () => fileUploadArea.classList.remove('drag-over'));
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('drag-over');
+            if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFileSelect(e.target.files[0]);
+        });
+        removeFileBtn.addEventListener('click', () => {
+            fileInput.value = '';
+            uploadedFileDiv.classList.remove('show');
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const hasFile = fileInput.files.length > 0;
+            const hasSingleEntry = gtinInput.value.trim(); // Only check for GTIN
+
+            if (!hasFile && !hasSingleEntry) {
+                alert('Please upload a file or provide GTIN for single entry.');
+                return;
+            }
+
+            try {
+                setExecutionState(true);
+                updateStatus('running', 'Starting process...');
+                progressCard.classList.add('show');
+                summaryCard.classList.remove('show');
+                logsContainer.innerHTML = '';
+                addLogEntry({ message: 'Initializing process...', level: 'info' });
+
+                const response = await fetch('/execute', { method: 'POST', body: formData });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    totalItemsEl.textContent = result.initial_items || 0;
+                    updateStats(0, result.initial_items, '-');
+                    updateProgress(0, 'Initializing...');
+                } else {
+                    throw new Error(result.error || 'Failed to start execution.');
+                }
+            } catch (error) {
+                addLogEntry({ message: `Error: ${error.message}`, level: 'error' });
+                setExecutionState(false);
+                updateStatus('error', 'Execution failed');
+            }
+        });
+
+        stopBtn.addEventListener('click', async () => {
+            try { await fetch('/stop', { method: 'POST' }); } 
+            catch (error) { addLogEntry({ message: `Error sending stop signal: ${error.message}`, level: 'error' }); }
+        });
+
+        // Socket.IO Handlers
+        socket.on('log', (logEntry) => addLogEntry(logEntry));
+        socket.on('progress', (data) => updateProgress(data.progress, data.task));
+        socket.on('item_completed', (data) => updateStats(data.completed, data.total, data.item_id));
+        
+        socket.on('execution_complete', () => {
+            setExecutionState(false);
+            updateStatus('idle', 'Process Completed');
+            updateProgress(100, "All tasks finished.");
+        });
+
+        socket.on('execution_summary', (data) => {
+            const failedItems = data.failed_items || [];
+            failedItemsList.innerHTML = ''; // Clear previous
+            if (failedItems.length > 0) {
+                summaryCard.classList.add('show');
+                failedItems.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    failedItemsList.appendChild(li);
+                });
+            } else {
+                summaryCard.classList.remove('show');
+            }
+        });
+
+        // UI Helper Functions
+        function handleFileSelect(file) {
+            fileNameSpan.textContent = file.name;
+            uploadedFileDiv.classList.add('show');
+        }
+
+        function addLogEntry(logEntry) {
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            const time = logEntry.timestamp || new Date().toLocaleTimeString('en-US', { hour12: false });
+            div.innerHTML = `<span class="log-timestamp">[${time}]</span><span class="log-message ${logEntry.level}">${logEntry.message}</span>`;
+            logsContainer.appendChild(div);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        function updateProgress(progress, task) {
+            const p = Math.round(progress);
+            progressBar.style.width = `${p}%`;
+            progressPercent.textContent = `${p}%`;
+            currentTask.textContent = task;
+        }
+
+        function updateStats(completed, total, itemId) {
+            completedItemsEl.textContent = completed;
+            remainingItemsEl.textContent = total - completed;
+            currentItemIdEl.textContent = itemId || '-';
+        }
+
+        function setExecutionState(running) {
+            startBtn.disabled = running;
+            stopBtn.disabled = !running;
+            form.querySelectorAll('input, button').forEach(el => {
+                if (el.id !== 'stopBtn') el.disabled = running;
+            });
+            fileUploadArea.style.pointerEvents = running ? 'none' : 'auto';
+            fileUploadArea.style.opacity = running ? '0.6' : '1';
+        }
+
+        function updateStatus(status, text) {
+            statusIndicator.className = `status-indicator status-${status}`;
+            statusText.textContent = text;
+        }
+    </script>
+</body>
+</html>
